@@ -1,0 +1,176 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Crm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Country="US" Name="ReapitMiddleware" Version="1" SupportsEmojis="true">
+  <Number Prefix="AsIs" MaxLength="20" />
+  <Connection MaxConcurrentRequests="2" />
+  <Parameters>
+    <Parameter Name="ApiKey" Type="Password" Parent="ReportCallEnabled" Editor="String" Title="Middleware API Key:" Default="" />
+    <Parameter Name="ReportCallEnabled" Type="Boolean" Editor="String" Title="Enable Call Journaling" Default="False" />
+    <Parameter Name="ReportCallEnabled" Type="Boolean" Editor="String" Title="Enable Call Journaling" Default="False" />
+    <Parameter Name="Subject" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Call Subject:" Default="3CX PhoneSystem Call" />
+    <Parameter Name="InboundCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Answered Inbound Call:" Default="[DateTime]: Answered incoming call from [Number] to [Agent] ([Duration])" />
+    <Parameter Name="MissedCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Missed Call:" Default="[DateTime]: Missed call from [Number] to [Agent]" />
+    <Parameter Name="OutboundCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Answered Outbound Call:" Default="[DateTime]: Answered outgoing call from [Agent] to [Number] ([Duration])" />
+    <Parameter Name="NotAnsweredOutboundCallText" Type="String" Parent="ReportCallEnabled" Editor="String" Title="Unanswered Outbound Call:" Default="[DateTime]: Unanswered outgoing call from [Agent] to [Number]" />
+  </Parameters>
+  <Authentication Type="No" />
+  <Scenarios>
+    <Scenario Id="" Type="REST">
+      <Request Url="https://king-prawn-app-zvcjx.ondigitalocean.app/api/3cx/reapit/lookup?number=[Number]" MessagePasses="0" RequestEncoding="UrlEncoded" RequestType="Get" ResponseType="Json">
+        <Headers>
+          <Value Key="X-3CX-API-Key" Passes="1" Type="String">[ApiKey]</Value>
+        </Headers>
+      </Request>
+      <Rules>
+        <Rule Type="Any">id</Rule>
+      </Rules>
+      <Variables>
+        <Variable Name="ContactID" Path="id">
+          <Filter />
+        </Variable>
+        <Variable Name="FirstName" Path="firstName">
+          <Filter />
+        </Variable>
+        <Variable Name="LastName" Path="lastName">
+          <Filter />
+        </Variable>
+        <Variable Name="CompanyName" Path="fullName">
+          <Filter />
+        </Variable>
+        <Variable Name="Email" Path="email">
+          <Filter />
+        </Variable>
+        <Variable Name="PhoneMobile" Path="phone">
+          <Filter />
+        </Variable>
+        <Variable Name="CustomValue" Path="entityType">
+          <Filter />
+        </Variable>
+      </Variables>
+      <Outputs AllowEmpty="false">
+        <Output Type="ContactID" Passes="0" Value="[ContactID]" />
+        <Output Type="FirstName" Passes="0" Value="[FirstName]" />
+        <Output Type="LastName" Passes="0" Value="[LastName]" />
+        <Output Type="CompanyName" Passes="0" Value="[CompanyName]" />
+        <Output Type="Email" Passes="0" Value="[Email]" />
+        <Output Type="PhoneMobile" Passes="0" Value="[PhoneMobile]" />
+        <Output Type="CustomValue" Passes="0" Value="[CustomValue]" />
+        <Output Type="ContactUrl" Passes="0" Value="https://king-prawn-app-zvcjx.ondigitalocean.app/health" />
+        <Output Type="EntityId" Passes="0" Value="[ContactID]" />
+        <Output Type="EntityType" Passes="0" Value="Contacts" />
+      </Outputs>
+    </Scenario>
+    <Scenario Id="LookupByEmail" Type="REST">
+      <Request Url="https://king-prawn-app-zvcjx.ondigitalocean.app/health" MessagePasses="0" RequestEncoding="UrlEncoded" RequestType="Get" ResponseType="Json" />
+      <Rules>
+        <Rule Type="Any">id</Rule>
+      </Rules>
+      <Variables>
+        <Variable Name="ContactID" Path="id">
+          <Filter />
+        </Variable>
+        <Variable Name="FirstName" Path="firstName">
+          <Filter />
+        </Variable>
+        <Variable Name="LastName" Path="lastName">
+          <Filter />
+        </Variable>
+        <Variable Name="CompanyName" Path="fullName">
+          <Filter />
+        </Variable>
+        <Variable Name="Email" Path="email">
+          <Filter />
+        </Variable>
+        <Variable Name="PhoneMobile" Path="phone">
+          <Filter />
+        </Variable>
+        <Variable Name="CustomValue" Path="entityType">
+          <Filter />
+        </Variable>
+      </Variables>
+      <Outputs AllowEmpty="false">
+        <Output Type="ContactID" Passes="0" Value="[ContactID]" />
+        <Output Type="FirstName" Passes="0" Value="[FirstName]" />
+        <Output Type="LastName" Passes="0" Value="[LastName]" />
+        <Output Type="CompanyName" Passes="0" Value="[CompanyName]" />
+        <Output Type="Email" Passes="0" Value="[Email]" />
+        <Output Type="PhoneMobile" Passes="0" Value="[PhoneMobile]" />
+        <Output Type="CustomValue" Passes="0" Value="[CustomValue]" />
+        <Output Type="ContactUrl" Passes="0" Value="https://king-prawn-app-zvcjx.ondigitalocean.app/health" />
+        <Output Type="EntityId" Passes="0" Value="[ContactID]" />
+        <Output Type="EntityType" Passes="0" Value="Contacts" />
+      </Outputs>
+    </Scenario>
+    <Scenario Id="ReportCall" Type="REST">
+      <Request SkipIf="[IIf([ReportCallEnabled]!=True||[EntityId]==&quot;&quot;,True,[IIf([CallType]!=Inbound,True,False)])]" Url="https://king-prawn-app-zvcjx.ondigitalocean.app/api/3cx/reapit/call-log" MessagePasses="0" RequestContentType="application/json" RequestEncoding="Json" RequestType="Post" ResponseType="Json">
+        <Headers>
+          <Value Key="X-3CX-API-Key" Passes="1" Type="String">[ApiKey]</Value>
+        </Headers>
+        <PostValues Key="">
+          <Value Key="associatedId" Passes="1" Type="String">[EntityId]</Value>
+          <Value Key="number" Passes="1" Type="String">[Number]</Value>
+          <Value Key="direction" Passes="1" Type="String">Inbound Answered</Value>
+          <Value Key="agent" Passes="1" Type="String">[AgentFirstName] [AgentLastName]</Value>
+          <Value Key="duration" Passes="1" Type="String">[Duration]</Value>
+          <Value Key="summary" Passes="1" Type="String">3CX inbound answered call logged automatically.</Value>
+          <Value Key="transcript" Passes="1" Type="String" />
+        </PostValues>
+      </Request>
+      <Variables />
+      <Outputs Next="ReportCallMissed" AllowEmpty="true" />
+    </Scenario>
+    <Scenario Id="ReportCallMissed" Type="REST">
+      <Request SkipIf="[IIf([ReportCallEnabled]!=True||[EntityId]==&quot;&quot;,True,[IIf([CallType]!=Missed,True,False)])]" Url="https://king-prawn-app-zvcjx.ondigitalocean.app/api/3cx/reapit/call-log" MessagePasses="0" RequestContentType="application/json" RequestEncoding="Json" RequestType="Post" ResponseType="Json">
+        <Headers>
+          <Value Key="X-3CX-API-Key" Passes="1" Type="String">[ApiKey]</Value>
+        </Headers>
+        <PostValues Key="">
+          <Value Key="associatedId" Passes="1" Type="String">[EntityId]</Value>
+          <Value Key="number" Passes="1" Type="String">[Number]</Value>
+          <Value Key="direction" Passes="1" Type="String">Inbound Missed</Value>
+          <Value Key="agent" Passes="1" Type="String">[AgentFirstName] [AgentLastName]</Value>
+          <Value Key="duration" Passes="1" Type="String">[Duration]</Value>
+          <Value Key="summary" Passes="1" Type="String">3CX inbound missed call logged automatically.</Value>
+          <Value Key="transcript" Passes="1" Type="String" />
+        </PostValues>
+      </Request>
+      <Variables />
+      <Outputs Next="ReportCallOutbound" AllowEmpty="true" />
+    </Scenario>
+    <Scenario Id="ReportCallOutbound" Type="REST">
+      <Request SkipIf="[IIf([ReportCallEnabled]!=True||[EntityId]==&quot;&quot;,True,[IIf([CallType]!=Outbound,True,False)])]" Url="https://king-prawn-app-zvcjx.ondigitalocean.app/api/3cx/reapit/call-log" MessagePasses="0" RequestContentType="application/json" RequestEncoding="Json" RequestType="Post" ResponseType="Json">
+        <Headers>
+          <Value Key="X-3CX-API-Key" Passes="1" Type="String">[ApiKey]</Value>
+        </Headers>
+        <PostValues Key="">
+          <Value Key="associatedId" Passes="1" Type="String">[EntityId]</Value>
+          <Value Key="number" Passes="1" Type="String">[Number]</Value>
+          <Value Key="direction" Passes="1" Type="String">Outbound Answered</Value>
+          <Value Key="agent" Passes="1" Type="String">[AgentFirstName] [AgentLastName]</Value>
+          <Value Key="duration" Passes="1" Type="String">[Duration]</Value>
+          <Value Key="summary" Passes="1" Type="String">3CX outbound answered call logged automatically.</Value>
+          <Value Key="transcript" Passes="1" Type="String" />
+        </PostValues>
+      </Request>
+      <Variables />
+      <Outputs Next="ReportCallNotanswered" AllowEmpty="true" />
+    </Scenario>
+    <Scenario Id="ReportCallNotanswered" Type="REST">
+      <Request SkipIf="[IIf([ReportCallEnabled]!=True||[EntityId]==&quot;&quot;,True,[IIf([CallType]!=Notanswered,True,False)])]" Url="https://king-prawn-app-zvcjx.ondigitalocean.app/api/3cx/reapit/call-log" MessagePasses="0" RequestContentType="application/json" RequestEncoding="Json" RequestType="Post" ResponseType="Json">
+        <Headers>
+          <Value Key="X-3CX-API-Key" Passes="1" Type="String">[ApiKey]</Value>
+        </Headers>
+        <PostValues Key="">
+          <Value Key="associatedId" Passes="1" Type="String">[EntityId]</Value>
+          <Value Key="number" Passes="1" Type="String">[Number]</Value>
+          <Value Key="direction" Passes="1" Type="String">Outbound Not Answered</Value>
+          <Value Key="agent" Passes="1" Type="String">[AgentFirstName] [AgentLastName]</Value>
+          <Value Key="duration" Passes="1" Type="String">[Duration]</Value>
+          <Value Key="summary" Passes="1" Type="String">3CX outbound not answered call logged automatically.</Value>
+          <Value Key="transcript" Passes="1" Type="String" />
+        </PostValues>
+      </Request>
+      <Variables />
+      <Outputs AllowEmpty="false" />
+    </Scenario>
+  </Scenarios>
+</Crm>
