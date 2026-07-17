@@ -1,4 +1,5 @@
 import os
+import json
 import time
 from typing import Optional
 
@@ -22,11 +23,30 @@ THREECX_API_KEY = os.getenv("THREECX_API_KEY")
 THREECX_BASE_URL = os.getenv("THREECX_BASE_URL", "").rstrip("/")
 THREECX_CALL_CONTROL_CLIENT_ID = os.getenv("THREECX_CALL_CONTROL_CLIENT_ID")
 THREECX_CALL_CONTROL_CLIENT_SECRET = os.getenv("THREECX_CALL_CONTROL_CLIENT_SECRET")
+THREECX_USER_EXTENSION_MAP_RAW = os.getenv("THREECX_USER_EXTENSION_MAP", "{}")
 
 _threecx_token_cache = {
     "access_token": None,
     "expires_at": 0,
 }
+
+def load_user_extension_map() -> dict[str, str]:
+    try:
+        raw_map = json.loads(THREECX_USER_EXTENSION_MAP_RAW)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("THREECX_USER_EXTENSION_MAP contains invalid JSON") from exc
+
+    if not isinstance(raw_map, dict):
+        raise RuntimeError("THREECX_USER_EXTENSION_MAP must be a JSON object")
+
+    return {
+        str(email).strip().lower(): str(extension).strip()
+        for email, extension in raw_map.items()
+        if str(email).strip() and str(extension).strip()
+    }
+
+
+THREECX_USER_EXTENSION_MAP = load_user_extension_map()
 
 
 _token_cache = {
@@ -46,7 +66,7 @@ class CallLogRequest(BaseModel):
 
 
 class ClickToDialRequest(BaseModel):
-    extension: str
+    email: str
     number: str
 
 
@@ -158,6 +178,7 @@ def health():
             and THREECX_CALL_CONTROL_CLIENT_ID
             and THREECX_CALL_CONTROL_CLIENT_SECRET
         ),
+        "mappedUsers": len(THREECX_USER_EXTENSION_MAP),
     }
 
 
@@ -168,13 +189,25 @@ def click_to_dial(
 ):
     check_api_key(x_3cx_api_key)
 
-    extension = request_data.extension.strip()
+    email = request_data.email.strip().lower()
     number = request_data.number.strip()
 
-    if not extension.isdigit():
-        raise HTTPException(status_code=422, detail="extension must contain digits only")
+    if not email:
+        raise HTTPException(status_code=422, detail="email is required")
     if not number:
         raise HTTPException(status_code=422, detail="number is required")
+
+    extension = THREECX_USER_EXTENSION_MAP.get(email)
+    if not extension:
+        raise HTTPException(
+            status_code=403,
+            detail="No 3CX extension is configured for this Reapit user",
+        )
+    if not extension.isdigit():
+        raise HTTPException(
+            status_code=500,
+            detail="Configured 3CX extension is invalid",
+        )
 
     token = get_threecx_token()
     response = requests.post(
@@ -203,6 +236,7 @@ def click_to_dial(
     return {
         "ok": True,
         "message": "3CX click-to-dial request accepted",
+        "email": email,
         "extension": extension,
         "number": number,
         "threecxResponse": response_payload,
